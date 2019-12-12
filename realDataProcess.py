@@ -335,7 +335,13 @@ def file_relabel(og_dir, og_subdir, new_dir):
     print('done')
 
 
-def imm(img_tensor, size = (512,512), colorbar = True):
+def imm(img_tensor, colorbar = True):
+    if len(img_tensor.shape) == 3:
+        size = (img_tensor.shape[0],img_tensor.shape[1])
+    elif len(img_tensor.shape) == 2:
+        size = img_tensor.shape
+    else:
+        RuntimeError('cannot reshape image properly')
     plt.figure(figsize=(10,10))
     plt.imshow(img_tensor.reshape(size),cmap='gray')
     if colorbar == True:
