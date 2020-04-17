@@ -44,33 +44,33 @@ def up(filters, input_, down_):
     up_ = Activation('relu')(up_)
     return up_
 
-def get_unet_1024(input_shape, num_classes=1):
+def get_unet(input_shape, num_classes=1):
     inputs = Input(shape=input_shape)
 
-    #down0b, down0b_res = down(8, inputs)
-    down0a, down0a_res = down(4, inputs)
-    down0, down0_res = down(8, down0a)
-    down1, down1_res = down(16, down0)
-    down2, down2_res = down(32, down1)
+    down0, down0_res = down(4, inputs)
+    down1, down1_res = down(8, down0)
+    down2, down2_res = down(16, down1)
+    down3, down3_res = down(32, down2)
 
-    center = Conv2D(32, (3, 3), padding='same')(down2)
+    center = Conv2D(32, (3, 3), padding='same')(down3)
     center = BatchNormalization(epsilon=1e-4)(center)
     center = Activation('relu')(center)
     center = Conv2D(32, (3, 3), padding='same')(center)
     center = BatchNormalization(epsilon=1e-4)(center)
     center = Activation('relu')(center)
 
-    up2 = up(32, center, down2_res)
-    up1 = up(16, up2, down1_res)
-    up0 = up(8, up1, down0_res)
-    up0a = up(4, up0, down0a_res)
-    #up0b = up(8, up0a, down0b_res)
+    up3 = up(32, center, down3_res)
+    up2 = up(16, up3, down2_res)
+    up1 = up(8, up2, down1_res)
+    up0 = up(4, up1, down0_res)
 
-    classify = Conv2D(num_classes, (1, 1), activation='sigmoid', name='final_layer')(up0a)
+    classify = Conv2D(num_classes, (1, 1), activation='sigmoid', name='final_layer')(up0)
 
     model = Model(inputs=inputs, outputs=classify)
 
     return model
+
+
 
 X = h5py.File('/global/scratch/cgroschner/combined_data/Bal_MedFilt_AuCdSeDots_20190726_v2.h5','r')['images'][:,:,:,:]
 Y = h5py.File('/global/scratch/cgroschner/combined_data/Bal_MedFilt_AuCdSeDots_20190726_maps_v2.h5','r')['maps'][:,:,:,:]
@@ -118,7 +118,7 @@ modelCheckpoint = ModelCheckpoint(save_weights,
                                   save_weights_only = True)
 callbacks_list = [modelCheckpoint,earlyStopping]
 
-model = get_unet_1024((512,512,1),2)
+model = get_unet((512,512,1),2)
 model.compile(loss='categorical_crossentropy', optimizer=Adam(lr=1e-4), metrics=[dice_coef])
 print(model.summary())
 model.fit_generator(train_generator,steps_per_epoch=1000,epochs=3,callbacks = callbacks_list,validation_data=test_generator,validation_steps=500,verbose = 2)
